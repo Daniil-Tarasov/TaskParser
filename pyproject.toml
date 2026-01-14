@@ -7,8 +7,22 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
+psycopg2-binary = "^2.9.11"
+sqlalchemy = "^2.0.45"
 
+
+[tool.poetry.group.lint.dependencies]
+flake8 = "^7.3.0"
+black = "^25.12.0"
+isort = "^7.0.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+exclude = '.git'
+
+[tool.isort]
+line_length = 119
