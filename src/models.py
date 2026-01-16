@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, BigInteger, DateTime, ForeignKey, func
+from sqlalchemy import Column, Integer, String, BigInteger, DateTime, ForeignKey, func, Index
 from sqlalchemy.orm import declarative_base, relationship, Mapped
 from typing import List
 
@@ -35,12 +35,6 @@ class Problem(Base):
     contest: Mapped["Contest"] = relationship("Contest", back_populates="problems")
     tags: Mapped[List["ProblemTag"]] = relationship("ProblemTag",
                                                     back_populates="problem")
-
-    # Метаданные для быстрого поиска
-    __table_args__ = (
-        {"postgresql_where": {"rating.isnot(None)"}}
-    )
-
     def __repr__(self) -> str:
         return f"Problem(id={self.id}, name='{self.name}', rating={self.rating})"
 
@@ -54,9 +48,8 @@ class ProblemTag(Base):
 
     problem: Mapped["Problem"] = relationship("Problem", back_populates="tags")
 
-    __table_args__ = (
-        {"postgresql_where": {"tag.isnot(None)"}}
-    )
-
     def __repr__(self) -> str:
         return f"ProblemTag(problem_id={self.problem_id}, tag='{self.tag}')"
+
+
+Index('ix_problems_rating_nonnull', Problem.rating, postgresql_where=Problem.rating.isnot(None))
