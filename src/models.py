@@ -15,7 +15,6 @@ class Contest(Base):
     created_at: Mapped[DateTime] = Column(DateTime(timezone=True),
                                           server_default=func.now())
 
-    # Связь с задачами (один контест -> много задач)
     problems: Mapped[List["Problem"]] = relationship("Problem",
                                                      back_populates="contest",
                                                      cascade="all, delete-orphan")

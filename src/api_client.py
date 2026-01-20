@@ -26,7 +26,6 @@ class CodeforcesAPI:
 
     def get_problem_tags(self, contest_id: int, index: str) -> List[str]:
         """Получить теги конкретной задачи"""
-        # ✅ ПРАВИЛЬНЫЙ ENDPOINT!
         url = f"{self.BASE_URL}problemset.problemTags"
         params = {"contestId": contest_id, "problemIndex": index}
 
