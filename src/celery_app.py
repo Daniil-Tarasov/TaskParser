@@ -19,9 +19,9 @@ app.conf.update(
 )
 
 app.conf.beat_schedule = {
-    'parse-codeforces-hourly': {
+    'parse-hourly': {
         'task': 'src.tasks.parse_problems',
-        'schedule': crontab(minute=0, hour='*'),  # Каждый час
+        'schedule': crontab(minute=0, hour='*'),  # каждый час
         'args': (1000,),
     },
 }

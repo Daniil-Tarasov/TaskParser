@@ -1,36 +1,40 @@
-from src.celery_app import app
+from celery import Celery
 from src.database import SessionLocal
-from src.api_client import CodeforcesAPI
-from src.models import Contest, Problem
+from src.api import CodeforcesAPI
 from sqlalchemy import text
+
+app = Celery('parser')
 
 
 @app.task
-def parse_problems(limit: int = 100):
-    print("🚀 ПАРСЕР CODEFORCES (БЕЗ ТЕГОВ)")
-
+def parse_problems(limit=1000, tags=None):
     api = CodeforcesAPI()
-    data = api.get_problems(limit=limit)
-    problems = data['result']['problems']
-    stats = data['result']['problemStatistics']
+    data = api.get_problems(tags, limit)
 
-    print(f"📥 Получено {len(problems)} задач")
+    if data["status"] != "OK":
+        return {"error": "API failed"}
 
     db = SessionLocal()
-    saved = 0
     try:
-        for i, problem in enumerate(problems[:20]):  # ← ПЕРВЫЕ 20!
-            print(f"💾 [{i + 1}/20] {problem['contestId']}{problem['index']}")
+        problem = Problem(
+            codeforces_id=f"{contest_id}{problem_data['index']}",
+            name=problem_data['name'],
+            rating=problem_data.get('rating'),
+            solved_count=problem_data.get('solved_count', 0),
+            contest_id=contest.id,
+            index=problem_data['index']
+        )
 
-            # БЕЗ ТЕГОВ!
-            saved += save_problem_simple(db, problem, stats)
+        for tag in problem_data.get('tags', []):
+            tag_obj = ProblemTag(problem=problem, tag=tag)
+            db.add(tag_obj)
 
+        db.add(problem)
         db.commit()
-        print(f"✅ СОХРАНЕНО {saved} НОВЫХ ЗАДАЧ!")
+
+        return {"parsed": len(problems)}
     finally:
         db.close()
-
-    return {"saved": saved, "total": len(problems)}
 
 
 def save_problem_simple(db, problem_data, statistics):
@@ -39,17 +43,14 @@ def save_problem_simple(db, problem_data, statistics):
     index = problem_data['index']
     problem_cf_id = f"{contest_id}{index}"
 
-    # Контест
     contest = db.query(Contest).filter_by(codeforces_id=contest_id).first()
     if not contest:
         contest = Contest(codeforces_id=contest_id, name=f"CF{contest_id}")
         db.add(contest)
         db.flush()
 
-    # Статистика
     stats = next((s for s in statistics if s['contestId'] == contest_id and s['index'] == index), None)
 
-    # Задача
     existing = db.query(Problem).filter_by(codeforces_id=problem_cf_id).first()
     if not existing:
         problem = Problem(

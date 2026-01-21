@@ -11,7 +11,7 @@ class Contest(Base):
     id: Mapped[int] = Column(Integer, primary_key=True, index=True)
     codeforces_id: Mapped[int] = Column(Integer, unique=True, index=True)
     name: Mapped[str] = Column(String(255), nullable=False)
-    type: Mapped[str] = Column(String(50))  # ICPC, Educational, etc.
+    type: Mapped[str] = Column(String(50))
     created_at: Mapped[DateTime] = Column(DateTime(timezone=True),
                                           server_default=func.now())
 
@@ -24,12 +24,12 @@ class Problem(Base):
     __tablename__ = "problems"
 
     id: Mapped[int] = Column(Integer, primary_key=True, index=True)
-    codeforces_id: Mapped[str] = Column(String(20), unique=True, index=True)  # "1234A"
+    codeforces_id: Mapped[str] = Column(String(20), unique=True, index=True)
     contest_id: Mapped[int] = Column(Integer, ForeignKey("contests.id"), index=True)
     name: Mapped[str] = Column(String(255), nullable=False)
-    rating: Mapped[int] = Column(Integer)  # Сложность 800, 1200, etc.
+    rating: Mapped[int] = Column(Integer)
     solved_count: Mapped[BigInteger] = Column(BigInteger, default=0)
-    index: Mapped[str] = Column(String(10))  # "A", "B", "C"
+    index: Mapped[str] = Column(String(10))
 
     contest: Mapped["Contest"] = relationship("Contest", back_populates="problems")
     tags: Mapped[List["ProblemTag"]] = relationship("ProblemTag",
@@ -43,7 +43,7 @@ class ProblemTag(Base):
 
     id: Mapped[int] = Column(Integer, primary_key=True, index=True)
     problem_id: Mapped[int] = Column(Integer, ForeignKey("problems.id"), index=True)
-    tag: Mapped[str] = Column(String(100), index=True)  # "math", "graphs", "dp"
+    tag: Mapped[str] = Column(String(100), index=True)
 
     problem: Mapped["Problem"] = relationship("Problem", back_populates="tags")
 
