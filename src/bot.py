@@ -3,6 +3,9 @@ import asyncio
 import logging
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
 from sqlalchemy import text
 from dotenv import load_dotenv
@@ -14,7 +17,8 @@ logging.basicConfig(level=logging.INFO)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher()
+storage = MemoryStorage()
+dp = Dispatcher(storage=storage)
 
 
 def get_main_menu():
@@ -22,6 +26,7 @@ def get_main_menu():
         [InlineKeyboardButton(text="📊 Статистика", callback_data="stats")],
         [InlineKeyboardButton(text="🔥 Топ задач", callback_data="top")],
         [InlineKeyboardButton(text="🎯 Фильтры", callback_data="filter")],
+        [InlineKeyboardButton(text="🔍 Поиск", callback_data="search")],
         [InlineKeyboardButton(text="🚀 Парсинг", callback_data="parse")]
     ])
 
@@ -58,6 +63,108 @@ def get_rating_menu():
         [InlineKeyboardButton(text="2000+", callback_data="rating:2000")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="back")]
     ])
+
+
+def get_search_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔍 Найти задачу", callback_data="search_input")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="back")]
+    ])
+
+
+class SearchStates(StatesGroup):
+    waiting_code = State()
+
+
+@dp.message(SearchStates.waiting_code)
+async def process_search(message: Message, state: FSMContext):
+    query = message.text.strip().upper()
+    db = SessionLocal()
+
+    try:
+        problem = db.execute(text("""
+            SELECT p.codeforces_id, p.name, p.rating, p.solved_count, p.index,
+                   c.name as contest_name
+            FROM problems p
+            LEFT JOIN contests c ON p.contest_id = c.id
+            WHERE UPPER(p.codeforces_id) = :query
+            LIMIT 1
+        """), {"query": query}).fetchone()
+
+        if not problem:
+            await message.answer(
+                f"❌ Задача `{query}` не найдена\n\n"
+                "_Попробуйте: 2185A, 2191B_",
+                reply_markup=get_back_menu(),
+                parse_mode="Markdown"
+            )
+        else:
+            cf_id, name, rating, solved, index, contest_name = problem
+
+            contest_id = cf_id[:-1]
+            letter = cf_id[-1]
+            cf_url = f"https://codeforces.com/problemset/problem/{contest_id}/{letter}"
+
+            kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🌐 Codeforces", url=cf_url)],
+                [InlineKeyboardButton(text="📋 Поделиться", switch_inline_query=f"Задача {cf_id} {rating}")],
+                [InlineKeyboardButton(text="⬅️ Меню", callback_data="back")]
+            ])
+
+            await message.answer(
+                f"🎯 **{cf_id}**\n\n"
+                f"📄 **{name}**\n"
+                f"⭐ **{rating or '?'}**\n"
+                f"✅ **{solved or 0}** solves\n"
+                f"📚 **{contest_name or 'Contest ?'} ({index})**\n\n"
+                f"_Найдено за 0.1с_",
+                reply_markup=kb,
+                parse_mode="Markdown"
+            )
+
+        await state.clear()
+
+    except Exception as e:
+        await message.answer(f"❌ Ошибка поиска: `{str(e)[:50]}`")
+        await state.clear()
+    finally:
+        if 'db' in locals():
+            db.close()
+
+
+@dp.message(Command("search"))
+async def search_command(message: Message, state: FSMContext):
+    await state.set_state(SearchStates.waiting_code)
+    await message.answer(
+        "🔍 **Введите код задачи**\n\n"
+        "_Например: /search 2185A_",
+        parse_mode="Markdown"
+    )
+
+
+@dp.callback_query(F.data == "search")
+async def search_menu(callback: CallbackQuery):
+    await callback.message.edit_text(
+        "🔍 **Поиск задач**\n\n"
+        "Введите код задачи:\n\n"
+        "_Нажмите кнопку или /search_",
+        reply_markup=get_search_menu(),
+        parse_mode="Markdown"
+    )
+
+
+@dp.callback_query(F.data == "search_input")
+async def search_input_prompt(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(SearchStates.waiting_code)
+    await callback.message.edit_text(
+        "🔍 **Введите код задачи**\n\n"
+        "**Примеры:**\n"
+        "`2185A` → Perfect Root\n"
+        "`2191B` → MEX Reordering\n\n"
+        "_Отправьте сообщение с кодом_",
+        parse_mode="Markdown"
+    )
+    await callback.answer("✅ Ожидаю код задачи!")
 
 
 @dp.message(Command("start"))
@@ -268,6 +375,68 @@ async def rating_filter(callback: CallbackQuery):
     await callback.message.edit_text(response_text + "\n*⬅️ Назад*",
                                      reply_markup=get_back_menu(),
                                      parse_mode="Markdown")
+
+
+@dp.message(SearchStates.waiting_code)
+async def process_search(message: Message, state: FSMContext):
+    query = message.text.strip().upper()
+    db = SessionLocal()
+
+    try:
+        problem = db.execute(text("""
+            SELECT p.codeforces_id, p.name, p.rating, p.solved_count, p.index,
+                   c.name as contest_name
+            FROM problems p
+            LEFT JOIN contests c ON p.contest_id = c.id
+            WHERE UPPER(p.codeforces_id) = :query
+            LIMIT 1
+        """), {"query": query}).fetchone()
+
+        if not problem:
+            await message.answer(
+                f"❌ Задача `{query}` не найдена\n\n"
+                "_Попробуйте: 2185A, 2191B_",
+                reply_markup=get_back_menu(),
+                parse_mode="Markdown"
+            )
+            await state.clear()
+            return
+
+        cf_id, name, rating, solved, index, contest_name = problem
+
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🌐 Codeforces", url=f"https://codeforces.com/problemset/problem/{cf_id}")],
+            [InlineKeyboardButton(text="📋 Поделиться", switch_inline_query=f"Задача {cf_id} {rating}")],
+            [InlineKeyboardButton(text="⬅️ Меню", callback_data="back")]
+        ])
+
+        await message.answer(
+            f"🎯 **{cf_id}**\n\n"
+            f"📄 **{name}**\n"
+            f"⭐ **{rating or '?'}**\n"
+            f"✅ **{solved or 0}** solves\n"
+            f"📚 **{contest_name or 'Contest ?'} ({index})**\n\n"
+            f"_Найдено за 0.1с_",
+            reply_markup=kb,
+            parse_mode="Markdown"
+        )
+
+    except Exception as e:
+        await message.answer(f"❌ Ошибка поиска: `{str(e)[:50]}`")
+    finally:
+        db.close()
+        await state.clear()
+
+
+@dp.message(Command("search"))
+async def search_command(message: Message, state: FSMContext):
+    await SearchStates.waiting_code.set()
+    await message.answer(
+        "🔍 **Введите код задачи**\n\n"
+        "`2185A` или `2191B`\n\n"
+        "_Например: /search 2185A_",
+        parse_mode="Markdown"
+    )
 
 
 async def main():
