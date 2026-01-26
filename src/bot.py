@@ -430,7 +430,7 @@ async def process_search(message: Message, state: FSMContext):
 
 @dp.message(Command("search"))
 async def search_command(message: Message, state: FSMContext):
-    await SearchStates.waiting_code.set()
+    await state.set_state(SearchStates.waiting_code)
     await message.answer(
         "🔍 **Введите код задачи**\n\n"
         "`2185A` или `2191B`\n\n"
