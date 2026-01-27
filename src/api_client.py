@@ -1,7 +1,8 @@
-import requests
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
+import requests
 
 logger = logging.getLogger(__name__)
 

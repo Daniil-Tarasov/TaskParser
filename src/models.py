@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, BigInteger, DateTime, ForeignKey, func, Index
-from sqlalchemy.orm import declarative_base, relationship, Mapped
 from typing import List
+
+from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Index, Integer, String, func
+from sqlalchemy.orm import Mapped, declarative_base, relationship
 
 Base = declarative_base()
 
@@ -12,12 +13,9 @@ class Contest(Base):
     codeforces_id: Mapped[int] = Column(Integer, unique=True, index=True)
     name: Mapped[str] = Column(String(255), nullable=False)
     type: Mapped[str] = Column(String(50))
-    created_at: Mapped[DateTime] = Column(DateTime(timezone=True),
-                                          server_default=func.now())
+    created_at: Mapped[DateTime] = Column(DateTime(timezone=True), server_default=func.now())
 
-    problems: Mapped[List["Problem"]] = relationship("Problem",
-                                                     back_populates="contest",
-                                                     cascade="all, delete-orphan")
+    problems: Mapped[List["Problem"]] = relationship("Problem", back_populates="contest", cascade="all, delete-orphan")
 
 
 class Problem(Base):
@@ -32,8 +30,8 @@ class Problem(Base):
     index: Mapped[str] = Column(String(10))
 
     contest: Mapped["Contest"] = relationship("Contest", back_populates="problems")
-    tags: Mapped[List["ProblemTag"]] = relationship("ProblemTag",
-                                                    back_populates="problem")
+    tags: Mapped[List["ProblemTag"]] = relationship("ProblemTag", back_populates="problem")
+
     def __repr__(self) -> str:
         return f"Problem(id={self.id}, name='{self.name}', rating={self.rating})"
 
@@ -51,4 +49,4 @@ class ProblemTag(Base):
         return f"ProblemTag(problem_id={self.problem_id}, tag='{self.tag}')"
 
 
-Index('ix_problems_rating_nonnull', Problem.rating, postgresql_where=Problem.rating.isnot(None))
+Index("ix_problems_rating_nonnull", Problem.rating, postgresql_where=Problem.rating.isnot(None))

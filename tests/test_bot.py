@@ -1,18 +1,30 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+import pytest
 import pytest_asyncio
+from aiogram.types import InlineKeyboardMarkup
 
 from src.bot import (
-    get_main_menu, get_back_menu, get_filter_menu, get_tags_menu, get_rating_menu,
-    start, stats_callback, top_callback, parse_callback, process_search,
-    search_command, filter_menu, tags_menu, rating_menu, tag_filter, rating_filter,
-    SearchStates
+    SearchStates,
+    filter_menu,
+    get_back_menu,
+    get_filter_menu,
+    get_main_menu,
+    parse_callback,
+    process_search,
+    rating_filter,
+    rating_menu,
+    search_command,
+    start,
+    stats_callback,
+    tag_filter,
+    tags_menu,
+    top_callback,
 )
 
 
 class TestBotKeyboards:
-    """✅ Клавиатуры (СИНХРОННЫЕ!)"""
+    """Клавиатуры"""
 
     def test_get_main_menu(self):
         kb = get_main_menu()
@@ -55,16 +67,16 @@ async def state_mock():
 
 
 class TestBotHandlers:
-    """✅ Основные handlers"""
+    """Основные handlers"""
 
     @pytest.mark.asyncio
-    @patch('src.bot.SessionLocal')
+    @patch("src.bot.SessionLocal")
     async def test_start_handler(self, mock_db, message_mock):
         await start(message_mock)
         message_mock.answer.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch('src.bot.SessionLocal')
+    @patch("src.bot.SessionLocal")
     async def test_stats_callback(self, mock_db, callback_mock):
         mock_session = MagicMock()
         mock_db.return_value = mock_session
@@ -74,14 +86,14 @@ class TestBotHandlers:
         callback_mock.answer.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch('src.bot.app')
+    @patch("src.bot.app")
     async def test_parse_callback(self, mock_celery, callback_mock):
         mock_celery.send_task.return_value.id = "test-task-id"
         await parse_callback(callback_mock)
         callback_mock.answer.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch('src.bot.SessionLocal')
+    @patch("src.bot.SessionLocal")
     async def test_top_callback(self, mock_db, callback_mock):
         mock_session = MagicMock()
         mock_db.return_value = mock_session
@@ -90,26 +102,32 @@ class TestBotHandlers:
         callback_mock.answer.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch('src.bot.SessionLocal')
+    @patch("src.bot.SessionLocal")
     async def test_process_search_found(self, mock_db, message_mock, state_mock):
         mock_session = MagicMock()
         mock_db.return_value = mock_session
         mock_session.execute.return_value.fetchone.return_value = (
-            "2185A", "Perfect Root", 1200, 30850, "A", "Round 987"
+            "2185A",
+            "Perfect Root",
+            1200,
+            30850,
+            "A",
+            "Round 987",
         )
         await process_search(message_mock, state_mock)
         message_mock.answer.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_search_command(self, message_mock, state_mock):
-        """✅ Команда /search"""
+        """Команда /search"""
+
         await search_command(message_mock, state_mock)
         state_mock.set_state.assert_called_once_with(SearchStates.waiting_code)  # ✅ ТОЧНЫЙ аргумент!
         message_mock.answer.assert_called_once()
 
 
 class TestBotMenus:
-    """✅ Меню callbacks"""
+    """Меню callbacks"""
 
     @pytest.mark.asyncio
     async def test_filter_menu(self, callback_mock):
@@ -130,10 +148,10 @@ class TestBotMenus:
 
 
 class TestBotFilters:
-    """✅ Фильтры"""
+    """Фильтры"""
 
     @pytest.mark.asyncio
-    @patch('src.bot.SessionLocal')
+    @patch("src.bot.SessionLocal")
     async def test_tag_filter(self, mock_db, callback_mock):
         mock_session = MagicMock()
         mock_db.return_value = mock_session
@@ -143,7 +161,7 @@ class TestBotFilters:
         callback_mock.answer.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch('src.bot.SessionLocal')
+    @patch("src.bot.SessionLocal")
     async def test_rating_filter(self, mock_db, callback_mock):
         mock_session = MagicMock()
         mock_db.return_value = mock_session
@@ -154,11 +172,12 @@ class TestBotFilters:
 
 
 class TestBotStates:
-    """✅ FSM состояния"""
+    """FSM состояния"""
 
     def test_search_states(self):
-        """✅ Проверка SearchStates"""
-        assert hasattr(SearchStates, 'waiting_code')
+        """Проверка SearchStates"""
+
+        assert hasattr(SearchStates, "waiting_code")
         state = SearchStates.waiting_code
 
         assert state.state == "SearchStates:waiting_code"
