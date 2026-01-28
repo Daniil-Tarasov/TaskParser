@@ -1,7 +1,7 @@
 services:
   telegram-bot:
     build: .
-    command: python -m src.bot  # ← Изменить!
+    command: python -m src.bot
     depends_on:
       postgres:
         condition: service_healthy
@@ -9,7 +9,7 @@ services:
       - .:/app
     env_file:
       - .env
-    working_dir: /app  # ← Добавить!
+    working_dir: /app
     restart: unless-stopped
   postgres:
     image: postgres:16
